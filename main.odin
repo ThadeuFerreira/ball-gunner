@@ -11,7 +11,7 @@ import "/game"
 
 
 screen_width : i32 = 1400
-screen_height : i32 = 1000
+screen_height : i32 = 1400
 play_width : f32 = 1000
 score_width : f32 = f32(screen_width) - play_width
 
@@ -83,6 +83,7 @@ main :: proc()
     gunner_position := rl.Vector2{play_width/2, f32(screen_height/2)}
     gunner := game.make_gunner(gunner_position, SHIP_SIZE, rl.RED)
   
+    tilemap := game.make_tilemap()
     // Main game loop
     for !rl.WindowShouldClose()    // Detect window close button or ESC key
     {
@@ -103,6 +104,7 @@ main :: proc()
 
         st_mouse_pos :=  rl.TextFormat( "%v, %v", mouse_pos.x ,mouse_pos.y)
         rl.DrawText(st_mouse_pos, i32(mouse_pos.x), i32(mouse_pos.y), 20, rl.WHITE)
+        game.draw_chunk(tilemap.chunks[0])
         game.update_gunner(gunner)
         game.draw_gunner(gunner^)
         rl.EndDrawing()

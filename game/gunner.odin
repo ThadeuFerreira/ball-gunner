@@ -1,20 +1,21 @@
-package gunner
+package game
 import rl "vendor:raylib"
 import "core:math"
 
 Gunner :: struct {
-    pos: rl.Vector2,
+    position: rl.Vector2,
     size: i32,
     color: rl.Color,
     rotation: f32,
+    velocity: rl.Vector2,
     acceleration: rl.Vector2,
     ammo: i32,
 }
 
-make_gunner :: proc(pos: rl.Vector2, size: i32, color: rl.Color) -> ^Gunner
+make_gunner :: proc(position: rl.Vector2, size: i32, color: rl.Color) -> ^Gunner
 {
     g := new(Gunner)
-    g.pos = pos
+    g.position = position
     g.size = size
     g.color = color
     return g
@@ -27,15 +28,31 @@ InputState :: struct {
     ammo: i32,
 }
 
+MAX_SPEED : f32 = 20.0
+MAX_AMMO : i32 = 1000
 update_gunner :: proc(gunner: ^Gunner)
 {
+    delta_time := rl.GetFrameTime()
+    speed : f32 = 15
     state := get_gunner_state(gunner)
     get_player_input(&state)
 
+    
+    // Apply acceleration
+    gunner.velocity += state.acceleration
+
+    // Limit speed 
+    if rl.Vector2Length(gunner.velocity) > MAX_SPEED {
+        gunner.velocity = rl.Vector2Normalize(gunner.velocity)*MAX_SPEED
+    }
+    
+    // Apply drag (optional, for more realistic movement)
+    gunner.velocity *= 0.995
+    
+    // Update position
+    gunner.position += gunner.velocity*delta_time*speed
+
     gunner.rotation = state.rotation
-    gunner.acceleration = state.acceleration
-    gunner.ammo = state.ammo
-    gunner.pos = gunner.pos + gunner.acceleration
 }
 
 get_gunner_state :: proc(gunner: ^Gunner) -> InputState
@@ -79,5 +96,5 @@ get_player_input :: proc(state : ^InputState)
 
 draw_gunner :: proc(gunner: Gunner)
 {
-    rl.DrawCircle(i32(gunner.pos.x), i32(gunner.pos.y), f32(gunner.size), gunner.color)
+    rl.DrawCircle(i32(gunner.position.x), i32(gunner.position.y), f32(gunner.size), gunner.color)
 }
