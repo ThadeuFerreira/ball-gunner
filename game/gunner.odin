@@ -9,6 +9,19 @@ Barrel :: struct {
     size : i32,
 }
 
+BulletStatus :: enum {
+    BULLET_ACTIVE,
+    BULLET_INACTIVE,
+}
+
+Bullet :: struct {
+    position: rl.Vector2,
+    velocity: rl.Vector2,
+    color: rl.Color,
+    radius: f32,
+    status: BulletStatus,
+}
+
 Gunner :: struct {
     position: rl.Vector2,
     size: i32,
@@ -19,8 +32,10 @@ Gunner :: struct {
     ammo: i32,
 
     barrel : Barrel,
+    bullets : [dynamic]^Bullet,
 }
-
+MAX_AMMO : i32 = 1000
+START_AMMO : i32 = 10
 make_gunner :: proc(position: rl.Vector2, size: i32, color: rl.Color) -> ^Gunner
 {
     g := new(Gunner)
@@ -29,11 +44,15 @@ make_gunner :: proc(position: rl.Vector2, size: i32, color: rl.Color) -> ^Gunner
     b.thickness = 5
     b.size = size + 2
 
+    bullets := make([dynamic]^Bullet,0, 100)
+
     g.position = position
     g.size = size
     g.color = color
     g.rotation = 0
     g.barrel = b
+    g.bullets = bullets
+    g.ammo = START_AMMO
 
     return g
 }
@@ -42,11 +61,10 @@ make_gunner :: proc(position: rl.Vector2, size: i32, color: rl.Color) -> ^Gunner
 InputState :: struct {
     rotation: f32,
     acceleration: rl.Vector2,
-    ammo: i32,
+    shooting: bool,
 }
 
 MAX_SPEED : f32 = 20.0
-MAX_AMMO : i32 = 1000
 update_gunner :: proc(gunner: ^Gunner, chunk : Chunk)
 {
     delta_time := rl.GetFrameTime()
@@ -71,7 +89,7 @@ update_gunner :: proc(gunner: ^Gunner, chunk : Chunk)
     gunner.position += gunner.velocity*delta_time*speed
 
     // Check for collisions
-    check, normal := check_collision(gunner, chunk)
+    check, normal := check_gunner_collision(gunner, chunk)
     if check {
         gunner.position -= gunner.velocity*delta_time*speed
         //calculate new velocity of the bounce contrary to the current velocity
@@ -82,9 +100,60 @@ update_gunner :: proc(gunner: ^Gunner, chunk : Chunk)
     }
 
     gunner.rotation = state.rotation
+
+    if state.shooting{
+        if gunner.ammo > 0 {
+            gunner.ammo -= 1
+            bullet := new(Bullet)
+            bullet.position = rl.Vector2{gunner.position.x + math.sin(gunner.rotation*math.PI/180)*f32(gunner.size), gunner.position.y - math.cos(gunner.rotation*math.PI/180)*f32(gunner.size)}
+            bullet.velocity = angle_to_vector(gunner.rotation)*speed*50
+            bullet.color = rl.YELLOW
+            bullet.radius = 5
+            bullet.status = BulletStatus.BULLET_ACTIVE
+            append(&gunner.bullets, bullet)
+        }
+    }
+
+    for i in 0..<len(gunner.bullets) {
+        bullet := gunner.bullets[i]
+        if bullet.status == BulletStatus.BULLET_INACTIVE {
+            continue
+        }
+        bullet.position += bullet.velocity*delta_time
+        check, _ := check_bullet_collision(bullet, chunk)
+        if  check {
+            bullet.status = BulletStatus.BULLET_INACTIVE
+            gunner.bullets[i] = bullet
+            continue
+        }
+    }
 }
 
-check_collision :: proc(gunner: ^Gunner, chunk : Chunk) -> (check : bool, normal : rl.Vector2)
+check_bullet_collision :: proc(bullet : ^Bullet, chunk : Chunk) -> (check : bool, normal : rl.Vector2)
+{
+    for b in chunk.tiles{
+        if !b.blocked {
+            continue
+        }
+        if rl.CheckCollisionCircleRec(bullet.position, bullet.radius, rl.Rectangle{b.position.x, b.position.y, b.size.x, b.size.y}) {
+            normal := rl.Vector2{0, 0}
+            if bullet.position.x < b.position.x {
+                normal.x = -1
+            } else if bullet.position.x > b.position.x + b.size.x {
+                normal.x = 1
+            }
+            if bullet.position.y < b.position.y {
+                normal.y = -1
+            } else if bullet.position.y > b.position.y + b.size.y {
+                normal.y = 1
+            }
+            return true, normal
+        }
+    }
+    return false, rl.Vector2{0, 0}
+}
+
+check_gunner_collision :: proc(gunner: ^Gunner, chunk : Chunk) -> (check : bool, normal : rl.Vector2)
 {
  
     for i in 0..<len(chunk.tiles) {
@@ -112,7 +181,7 @@ get_gunner_state :: proc(gunner: ^Gunner) -> InputState
     state := InputState{}
     state.rotation = gunner.rotation
     state.acceleration = gunner.acceleration
-    state.ammo = gunner.ammo
+    
     return state
 }
 
@@ -123,17 +192,21 @@ angle_to_vector :: proc(angle : f32) -> rl.Vector2 {
 
 get_player_input :: proc(state : ^InputState)  
 {
-    if rl.IsKeyDown(rl.KeyboardKey.SPACE) && !rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) && !rl.IsKeyDown(rl.KeyboardKey.RIGHT_CONTROL) {
+    if (rl.IsKeyDown(rl.KeyboardKey.W) || rl.IsKeyDown(rl.KeyboardKey.UP)) && !rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) && !rl.IsKeyDown(rl.KeyboardKey.RIGHT_CONTROL) {
         // Calculate acceleration based on ship's current rotation
         acceleration_magnitude : f32 = 0.6
         state.acceleration = angle_to_vector(state.rotation)* acceleration_magnitude
         
     } else if rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) || rl.IsKeyDown(rl.KeyboardKey.RIGHT_CONTROL) {
-        // fire_bullet(ship)
-        state.ammo -= 1
         state.acceleration = rl.Vector2{0, 0}
     } else {
         state.acceleration = rl.Vector2{0, 0}
+    }
+
+    if rl.IsKeyPressed(rl.KeyboardKey.SPACE) {
+        state.shooting = true
+    } else {
+        state.shooting = false
     }
     
     rotation_speed : f32 = 5
@@ -153,5 +226,13 @@ draw_gunner :: proc(gunner: Gunner)
     line_start := rl.Vector2{gunner.position.x, gunner.position.y}
     line_end := rl.Vector2{gunner.position.x + math.sin(gunner.rotation*math.PI/180)*f32(barrel.size), gunner.position.y - math.cos(gunner.rotation*math.PI/180)*f32(barrel.size)}
     rl.DrawLineEx(line_start, line_end, f32(barrel.thickness), barrel.color)
+
+    for i in 0..<len(gunner.bullets) {
+        bullet := gunner.bullets[i]
+        if bullet.status == BulletStatus.BULLET_INACTIVE {
+            continue
+        }
+        rl.DrawCircleV(bullet.position, bullet.radius, bullet.color)
+    }
 }
 
