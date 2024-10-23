@@ -102,11 +102,13 @@ main :: proc()
 
         }
 
+        
+        game.draw_chunk(tilemap.chunks[0])
+        game.update_gunner(gunner, tilemap.chunks[0])
+        game.draw_gunner(gunner^)
+
         st_mouse_pos :=  rl.TextFormat( "%v, %v", mouse_pos.x ,mouse_pos.y)
         rl.DrawText(st_mouse_pos, i32(mouse_pos.x), i32(mouse_pos.y), 20, rl.WHITE)
-        game.draw_chunk(tilemap.chunks[0])
-        game.update_gunner(gunner)
-        game.draw_gunner(gunner^)
         rl.EndDrawing()
         free_all(context.temp_allocator)
     }
