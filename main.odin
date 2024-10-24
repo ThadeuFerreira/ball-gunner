@@ -81,7 +81,7 @@ main :: proc()
     game_over := false
 
     gunner_position := rl.Vector2{play_width/2, f32(screen_height/2)}
-    gunner := game.make_gunner(gunner_position, GUNNER_SIZE, rl.RED)
+    gunner := game.make_gunner(gunner_position, rl.RED)
   
     tilemap := game.make_tilemap()
     // Main game loop

@@ -3,6 +3,11 @@ import rl "vendor:raylib"
 import "core:math"
 import "core:math/linalg"
 
+MAX_AMMO : i32 = 1000
+START_AMMO : i32 = 100
+MAX_SPEED : f32 = 20.0
+
+GUNNER_SIZE : i32 = 20
 Barrel :: struct {
     color: rl.Color,
     thickness: i32,
@@ -34,20 +39,19 @@ Gunner :: struct {
     barrel : Barrel,
     bullets : [dynamic]^Bullet,
 }
-MAX_AMMO : i32 = 1000
-START_AMMO : i32 = 10
-make_gunner :: proc(position: rl.Vector2, size: i32, color: rl.Color) -> ^Gunner
+
+make_gunner :: proc(position: rl.Vector2, color: rl.Color) -> ^Gunner
 {
     g := new(Gunner)
     b := Barrel{}
     b.color = rl.BLUE
     b.thickness = 5
-    b.size = size + 2
+    b.size = GUNNER_SIZE
 
     bullets := make([dynamic]^Bullet,0, 100)
 
     g.position = position
-    g.size = size
+    g.size = GUNNER_SIZE
     g.color = color
     g.rotation = 0
     g.barrel = b
@@ -64,7 +68,7 @@ InputState :: struct {
     shooting: bool,
 }
 
-MAX_SPEED : f32 = 20.0
+
 update_gunner :: proc(gunner: ^Gunner, chunks : []Chunk)
 {
     delta_time := rl.GetFrameTime()
@@ -93,9 +97,9 @@ update_gunner :: proc(gunner: ^Gunner, chunks : []Chunk)
     if check {
         gunner.position -= gunner.velocity*delta_time*speed
         //calculate new velocity of the bounce contrary to the current velocity
-        incoming_velocity := rl.Vector2Normalize(gunner.velocity)
-        bounce_velocity := linalg.reflect(incoming_velocity, normal)
-        gunner.velocity = bounce_velocity*speed
+        bounce_velocity := linalg.reflect(gunner.velocity, normal)
+        bounce_damping := f32(0.2)
+        gunner.velocity = bounce_velocity*bounce_damping
         
     }
 
@@ -196,11 +200,16 @@ angle_to_vector :: proc(angle : f32) -> rl.Vector2 {
 
 get_player_input :: proc(state : ^InputState)  
 {
-    if (rl.IsKeyDown(rl.KeyboardKey.W) || rl.IsKeyDown(rl.KeyboardKey.UP)) && !rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) && !rl.IsKeyDown(rl.KeyboardKey.RIGHT_CONTROL) {
+    if (rl.IsKeyDown(rl.KeyboardKey.W) || rl.IsKeyDown(rl.KeyboardKey.UP)) \
+        && !rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) && !rl.IsKeyDown(rl.KeyboardKey.RIGHT_CONTROL) {
         // Calculate acceleration based on ship's current rotation
         acceleration_magnitude : f32 = 0.6
         state.acceleration = angle_to_vector(state.rotation)* acceleration_magnitude
         
+    } else if rl.IsKeyDown(rl.KeyboardKey.S) || rl.IsKeyDown(rl.KeyboardKey.DOWN) {
+        acceleration_magnitude : f32 = 0.6
+        state.acceleration = -angle_to_vector(state.rotation)* acceleration_magnitude
+    
     } else if rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) || rl.IsKeyDown(rl.KeyboardKey.RIGHT_CONTROL) {
         state.acceleration = rl.Vector2{0, 0}
     } else {

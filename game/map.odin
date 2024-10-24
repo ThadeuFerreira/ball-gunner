@@ -3,6 +3,8 @@ package game
 import "core:math"
 import rl "vendor:raylib"
 
+TILE_SIZE : i32 = 64
+TILE_NUM : i32 = 17
 
 Tile :: struct {
     id: i32,
@@ -11,9 +13,6 @@ Tile :: struct {
     size : rl.Vector2,
     position : rl.Vector2,
 }
-
-TILE_SIZE : i32 = 32
-TILE_NUM : i32 = 17
 
 // A Chunk as a part of the TileMap that is visible on the screen
 Chunk :: struct {
@@ -57,16 +56,16 @@ make_chunk :: proc(tile_size : rl.Vector2, chunk_id : i32, openings : Openings, 
             tile_position := rl.Vector2{f32(i)*tile_size.x + vertival_offset, f32(j)*tile_size.y + horizontal_offset}
             if i == 0 || j == 0 || i == TILE_NUM -1 || j == TILE_NUM -1{
                 blocked := true
-                if openings.north && i == i32(TILE_NUM/2) && j == 0 {
+                if openings.north && (i == i32(TILE_NUM/2) || i == i32(TILE_NUM/2 + 1) || i == i32(TILE_NUM/2 - 1)) && j == 0 {
                     blocked = false
                 }
-                if openings.east && i == TILE_NUM -1 && j == i32(TILE_NUM/2)  {
+                if openings.east && i == TILE_NUM -1 && (j == i32(TILE_NUM/2) || j == i32(TILE_NUM/2 + 1) || j == i32(TILE_NUM/2 - 1))  {
                     blocked = false
                 }
-                if openings.south && i == i32(TILE_NUM/2)  && j == TILE_NUM -1 {
+                if openings.south && (i == i32(TILE_NUM/2) || i == i32(TILE_NUM/2 + 1) || i == i32(TILE_NUM/2 - 1))  && j == TILE_NUM -1 {
                     blocked = false
                 }
-                if openings.west && i == 0 && j == i32(TILE_NUM/2)  {
+                if openings.west && i == 0 && (j == i32(TILE_NUM/2) || j == i32(TILE_NUM/2 + 1) || j == i32(TILE_NUM/2 - 1))  {
                     blocked = false
                 }
                 
