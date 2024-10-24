@@ -15,7 +15,7 @@ screen_height : i32 = 1400
 play_width : f32 = 1000
 score_width : f32 = f32(screen_width) - play_width
 
-SHIP_SIZE : i32 = 30
+GUNNER_SIZE : i32 = 10
 
 BRUSH_SHAPE :: enum {
     SQUARE,
@@ -81,7 +81,7 @@ main :: proc()
     game_over := false
 
     gunner_position := rl.Vector2{play_width/2, f32(screen_height/2)}
-    gunner := game.make_gunner(gunner_position, SHIP_SIZE, rl.RED)
+    gunner := game.make_gunner(gunner_position, GUNNER_SIZE, rl.RED)
   
     tilemap := game.make_tilemap()
     // Main game loop
@@ -103,8 +103,8 @@ main :: proc()
         }
 
         
-        game.draw_chunk(tilemap.chunks[0])
-        game.update_gunner(gunner, tilemap.chunks[0])
+        game.draw_chunk(tilemap.chunks)
+        game.update_gunner(gunner, tilemap.chunks)
         game.draw_gunner(gunner^)
 
         st_mouse_pos :=  rl.TextFormat( "%v, %v", mouse_pos.x ,mouse_pos.y)

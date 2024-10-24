@@ -65,7 +65,7 @@ InputState :: struct {
 }
 
 MAX_SPEED : f32 = 20.0
-update_gunner :: proc(gunner: ^Gunner, chunk : Chunk)
+update_gunner :: proc(gunner: ^Gunner, chunks : []Chunk)
 {
     delta_time := rl.GetFrameTime()
     speed : f32 = 15
@@ -89,7 +89,7 @@ update_gunner :: proc(gunner: ^Gunner, chunk : Chunk)
     gunner.position += gunner.velocity*delta_time*speed
 
     // Check for collisions
-    check, normal := check_gunner_collision(gunner, chunk)
+    check, normal := check_gunner_collision(gunner, chunks)
     if check {
         gunner.position -= gunner.velocity*delta_time*speed
         //calculate new velocity of the bounce contrary to the current velocity
@@ -120,7 +120,7 @@ update_gunner :: proc(gunner: ^Gunner, chunk : Chunk)
             continue
         }
         bullet.position += bullet.velocity*delta_time
-        check, _ := check_bullet_collision(bullet, chunk)
+        check, _ := check_bullet_collision(bullet, chunks)
         if  check {
             bullet.status = BulletStatus.BULLET_INACTIVE
             gunner.bullets[i] = bullet
@@ -129,50 +129,54 @@ update_gunner :: proc(gunner: ^Gunner, chunk : Chunk)
     }
 }
 
-check_bullet_collision :: proc(bullet : ^Bullet, chunk : Chunk) -> (check : bool, normal : rl.Vector2)
+check_bullet_collision :: proc(bullet : ^Bullet, chunks : []Chunk) -> (check : bool, normal : rl.Vector2)
 {
-    for b in chunk.tiles{
-        if !b.blocked {
-            continue
-        }
-        if rl.CheckCollisionCircleRec(bullet.position, bullet.radius, rl.Rectangle{b.position.x, b.position.y, b.size.x, b.size.y}) {
-            normal := rl.Vector2{0, 0}
-            if bullet.position.x < b.position.x {
-                normal.x = -1
-            } else if bullet.position.x > b.position.x + b.size.x {
-                normal.x = 1
+    for chunk in chunks {
+        for b in chunk.tiles{
+            if !b.blocked {
+                continue
             }
-            if bullet.position.y < b.position.y {
-                normal.y = -1
-            } else if bullet.position.y > b.position.y + b.size.y {
-                normal.y = 1
+            if rl.CheckCollisionCircleRec(bullet.position, bullet.radius, rl.Rectangle{b.position.x, b.position.y, b.size.x, b.size.y}) {
+                normal := rl.Vector2{0, 0}
+                if bullet.position.x < b.position.x {
+                    normal.x = -1
+                } else if bullet.position.x > b.position.x + b.size.x {
+                    normal.x = 1
+                }
+                if bullet.position.y < b.position.y {
+                    normal.y = -1
+                } else if bullet.position.y > b.position.y + b.size.y {
+                    normal.y = 1
+                }
+                return true, normal
             }
-            return true, normal
         }
     }
     return false, rl.Vector2{0, 0}
 }
 
-check_gunner_collision :: proc(gunner: ^Gunner, chunk : Chunk) -> (check : bool, normal : rl.Vector2)
+check_gunner_collision :: proc(gunner: ^Gunner, chunks : []Chunk) -> (check : bool, normal : rl.Vector2)
 {
- 
-    for i in 0..<len(chunk.tiles) {
-        tile := chunk.tiles[i]
-        if tile.blocked && rl.CheckCollisionCircleRec(gunner.position, f32(gunner.size), rl.Rectangle{tile.position.x, tile.position.y, tile.size.x, tile.size.y}) {
-            normal := rl.Vector2{0, 0}
-            if gunner.position.x < tile.position.x {
-                normal.x = -1
-            } else if gunner.position.x > tile.position.x + tile.size.x {
-                normal.x = 1
+    for chunk in chunks {
+        for i in 0..<len(chunk.tiles) {
+            tile := chunk.tiles[i]
+            if tile.blocked && rl.CheckCollisionCircleRec(gunner.position, f32(gunner.size), rl.Rectangle{tile.position.x, tile.position.y, tile.size.x, tile.size.y}) {
+                normal := rl.Vector2{0, 0}
+                if gunner.position.x < tile.position.x {
+                    normal.x = -1
+                } else if gunner.position.x > tile.position.x + tile.size.x {
+                    normal.x = 1
+                }
+                if gunner.position.y < tile.position.y {
+                    normal.y = -1
+                } else if gunner.position.y > tile.position.y + tile.size.y {
+                    normal.y = 1
+                }
+                return true, normal
             }
-            if gunner.position.y < tile.position.y {
-                normal.y = -1
-            } else if gunner.position.y > tile.position.y + tile.size.y {
-                normal.y = 1
-            }
-            return true, normal
         }
     }
+    
     return false, rl.Vector2{0, 0}
 }
 
