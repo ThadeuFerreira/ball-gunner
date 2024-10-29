@@ -29,34 +29,51 @@ Bullet :: struct {
 
 Gunner :: struct {
     position: rl.Vector2,
+    start_position: rl.Vector2,
     size: i32,
     color: rl.Color,
     rotation: f32,
     velocity: rl.Vector2,
     acceleration: rl.Vector2,
     ammo: i32,
+    status : GUNNER_STATUS,
 
     barrel : Barrel,
     bullets : [dynamic]^Bullet,
+
+    flag : ^Flag,
+    player_id : i32,
 }
 
-make_gunner :: proc(position: rl.Vector2, color: rl.Color) -> ^Gunner
+GUNNER_STATUS :: enum {
+    GUNNER_ALIVE,
+    GUNNER_DEAD,
+}
+
+make_gunner :: proc(position: rl.Vector2, player_id: i32, color: rl.Color) -> ^Gunner
 {
     g := new(Gunner)
     b := Barrel{}
-    b.color = rl.BLUE
+    if color == rl.RED {
+        b.color = rl.BLUE
+    } else if color == rl.BLUE {
+        b.color = rl.RED
+    }
     b.thickness = 5
     b.size = GUNNER_SIZE
 
     bullets := make([dynamic]^Bullet,0, 100)
 
     g.position = position
+    g.start_position = position
     g.size = GUNNER_SIZE
     g.color = color
     g.rotation = 0
     g.barrel = b
     g.bullets = bullets
     g.ammo = START_AMMO
+    g.player_id = player_id
+    g.status = GUNNER_STATUS.GUNNER_ALIVE
 
     return g
 }
@@ -71,6 +88,9 @@ InputState :: struct {
 
 update_gunner :: proc(gunner: ^Gunner, chunks : []Chunk)
 {
+    if gunner.status == GUNNER_STATUS.GUNNER_DEAD {
+        return
+    }
     delta_time := rl.GetFrameTime()
     speed : f32 = 15
     state := get_gunner_state(gunner)
@@ -130,6 +150,10 @@ update_gunner :: proc(gunner: ^Gunner, chunks : []Chunk)
             gunner.bullets[i] = bullet
             continue
         }
+    }
+
+    if gunner.flag != nil {
+        gunner.flag.position = gunner.position
     }
 }
 
@@ -234,6 +258,9 @@ get_player_input :: proc(state : ^InputState)
 
 draw_gunner :: proc(gunner: Gunner)
 {
+    if gunner.status == GUNNER_STATUS.GUNNER_DEAD {
+        return
+    }
     rl.DrawCircle(i32(gunner.position.x), i32(gunner.position.y), f32(gunner.size), gunner.color)
     barrel := gunner.barrel
     line_start := rl.Vector2{gunner.position.x, gunner.position.y}
