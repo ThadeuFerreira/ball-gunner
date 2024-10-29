@@ -69,7 +69,7 @@ main :: proc()
 
     rl.SetConfigFlags(rl.ConfigFlags{rl.ConfigFlag.WINDOW_TRANSPARENT});
 
-    rl.InitWindow(screen_width, screen_height, "raylib [core] example - basic window");
+    rl.InitWindow(screen_width, screen_height, "MP Game from the early 2000s");
     rl.HideCursor()
         
 
